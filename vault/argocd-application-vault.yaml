@@ -1,0 +1,33 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: openshift-gitops
+spec:
+  destination:
+    namespace: vault
+    server: 'https://kubernetes.default.svc'
+  project: default
+  source:
+    chart: vault
+    helm:
+      parameters:
+        - name: server.dev.enabled
+          value: 'true'
+        - name: server.enabled
+          value: 'true'
+        - name: server.route.enabled
+          value: 'true'
+        - name: server.route.host
+          value: vault-server.apps.cluster-68kfh.dynamic.redhatworkshops.io
+        - name: ui.enabled
+          value: 'true'
+        - name: injector.certs.caBundle
+          value: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNTRENDQWU2Z0F3SUJBZ0lVUERXaCszZG8wV3IxTWtoVjY2NFB3M1RPRmpNd0NnWUlLb1pJemowRUF3SXcKR2pFWU1CWUdBMVVFQXhNUFFXZGxiblFnU1c1cVpXTjBJRU5CTUI0WERUSTFNRFl4TVRFMU1qSXhOMW9YRFRNMQpNRFl3T1RFMU1qTXhOMW93R2pFWU1CWUdBMVVFQXhNUFFXZGxiblFnU1c1cVpXTjBJRU5CTUZrd0V3WUhLb1pJCnpqMENBUVlJS29aSXpqMERBUWNEUWdBRVZaZzBqc296R092N3FVcjRGdmNzOVNCT3hjdnhtRGlVSVBBTm45MksKWjVFU1pCdzhnaEhua0lUNG15UTdYOG1YYTBVOXRMSDMyeDFKM2FSZm51Sm1QcU9DQVJBd2dnRU1NQTRHQTFVZApEd0VCL3dRRUF3SUNoREFUQmdOVkhTVUVEREFLQmdnckJnRUZCUWNEQVRBUEJnTlZIUk1CQWY4RUJUQURBUUgvCk1HZ0dBMVVkRGdSaEJGODBOVHBoTlRwa01EcG1Zam81T0RwbFpEb3hORG8zTVRveFpEbzJNem8yTmpwa05UbzAKWWpvMU5qbzFNenBpTXpveE5EbzJPRG8zT0RwaVl6b3lOem8xWXpveE1Eb3lPRG93T0Rwa016cGtNVHBtTXpwagpaam96TkRveFl6cGtZVEJxQmdOVkhTTUVZekJoZ0Y4ME5UcGhOVHBrTURwbVlqbzVPRHBsWkRveE5EbzNNVG94ClpEbzJNem8yTmpwa05UbzBZam8xTmpvMU16cGlNem94TkRvMk9EbzNPRHBpWXpveU56bzFZem94TURveU9Eb3cKT0Rwa016cGtNVHBtTXpwalpqb3pORG94WXpwa1lUQUtCZ2dxaGtqT1BRUURBZ05JQURCRkFpQTYvTEhDQkJMLwpRNTJXT3cwbVVaenV6a1doakNzdnZmb1dDc2pERjR2WmNnSWhBS3ptQTl4QmFLbUhDQmJGVktGcFd6NDV5U1ZsClhJYm1hYi95MjBjZlVDYjUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    repoURL: 'https://helm.releases.hashicorp.com/'
+    targetRevision: 0.30.0
+  syncPolicy:
+    automated: {}
+    syncOptions:
+      - CreateNamespace=true

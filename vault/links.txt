@@ -1,0 +1,3 @@
+1. Managing your Ansible Automation Platform secrets with Hashicorp Vault: https://interact.redhat.com/share/8wSFxhB1CT2w7Z7OWsyz
+2. Automating secrets management with HashiCorp Vault and Red Hat Ansible Automation Platform: https://www.redhat.com/en/blog/automating-secrets-management-hashicorp-vault-and-red-hat-ansible-automation-platform
+
