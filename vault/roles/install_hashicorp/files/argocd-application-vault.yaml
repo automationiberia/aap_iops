@@ -1,0 +1,53 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: openshift-gitops
+spec:
+  ignoreDifferences:
+    - kind: admissionregistration.k8s.io_MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+  destination:
+    namespace: vault
+    server: 'https://kubernetes.default.svc'
+  project: default
+  source:
+    chart: vault
+    helm:
+      parameters:
+        - name: server.dev.enabled
+          value: 'true'
+        - name: server.enabled
+          value: 'true'
+        - name: server.route.enabled
+          value: 'true'
+        - name: server.route.host
+          value: vault-server.apps.cluster-68kfh.dynamic.redhatworkshops.io
+        - name: ui.enabled
+          value: 'true'
+        - name: injector.certs.caBundle
+          value: ''
+    repoURL: 'https://helm.releases.hashicorp.com/'
+    targetRevision: 0.30.0
+  syncPolicy:
+    automated: {}
+    syncOptions:
+      - CreateNamespace=true
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: vault-server
+  namespace: vault
+spec:
+  host: vault-server.apps.cluster-68kfh.dynamic.redhatworkshops.io
+  path: /
+  to:
+    kind: Service
+    name: vault-ui
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None

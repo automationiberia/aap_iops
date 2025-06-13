@@ -1,0 +1,83 @@
+#SPDX-License-Identifier: GPL3.0+
+---
+- name: "Create the project {{ instance_name }}"
+  kubernetes.core.k8s:
+    name: "{{ instance_name }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: "Create the Application to deploy the Hashicorp Vault Server"
+  kubernetes.core.k8s:
+    state: present
+    src: argocd-application-vault.yaml
+
+- name: "Fix the permissions for the service accounts"
+  ansible.builtin.shell: "oc adm policy add-scc-to-user anyuid -z {{ instance_name }}"
+  loop:
+    - "{{ instance_name }}"
+    - "{{ instance_name }}-agent-injector"
+  loop_control:
+    loop_var: _current_sa
+    label: "{{ _current_sa }}"
+
+- name: "Get the assigned caBundle"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: MutatingWebhookConfiguration
+    name: "{{ instance_name }}-agent-injector-cfg"
+  register: _current_object
+
+- name: "Get the definition for the Application {{ instance_name }}"
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    name: "{{ instance_name }}"
+    namespace: "openshift-gitops"
+  register: _current_application
+
+- name: Apply the patch operation to the existing Application
+  kubernetes.core.k8s_json_patch:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    namespace: "openshift-gitops"
+    name: "{{ instance_name }}"
+    patch:
+      - op: replace
+        path: /spec/source/helm/parameters
+        value: "{{ _current_params + [{'name': 'injector.certs.caBundle', 'value': _new_ca_bundle}] }}"
+  vars:
+    _current_params: "{{ (_current_application.resources | first).spec.source.helm.parameters | rejectattr('name', 'equalto', 'injector.certs.caBundle') }}"
+    _new_ca_bundle: "{{ ((_current_object.resources | first).webhooks | selectattr('clientConfig.caBundle') | first).clientConfig.caBundle }}"
+
+...
+
+####
+####
+#### #!/usr/bin/env bash
+####
+#### INSTANCE_NAME=vault
+####
+#### oc new-project ${INSTANCE_NAME}
+#### oc apply -f argocd-application-${INSTANCE_NAME}.yaml
+#### oc adm policy add-scc-to-user anyuid -z ${INSTANCE_NAME}
+#### oc adm policy add-scc-to-user anyuid -z ${INSTANCE_NAME}-agent-injector
+#### sleep 5
+#### ASSIGNED_CABUNDLE=$(oc get applications -n openshift-gitops ${INSTANCE_NAME} -o yaml | yq eval '.status.history[].source.helm.parameters.[] | select(.name == "injector.certs.caBundle") | .value')
+#### oc patch --type='merge' application -n openshift-gitops ${INSTANCE_NAME} -p '{"spec": {"source": {"helm": {"parameters": [{"name": "injector.certs.caBundle", "value": "${ASSIGNED_CABUNDLE}"}]}}}}'
+####
+#### #VAULT_SERVER='http://vaultserverhost:8200'
+#### #VAULT_TOKEN='root'
+#### #SSH_KEY_USERNAME="user1"
+#### #SSH_KEY_FILE="~/.ssh/id_rsa"
+####
+#### read -p "Enter the Vault Server: " VAULT_SERVER
+#### read -s -p "Enter the Vault Token: " VAULT_TOKEN
+#### read -p "Enter the SSH Username: " SSH_KEY_USERNAME
+#### read -p "Enter the SSH private key file: " SSH_KEY_FILE
+####
+#### SSH_PRIVATE_KEY=$(cat ${SSH_KEY_FILE})
+####
+#### oc exec ${INSTANCE_NAME}-0 -- vault login -address=${VAULT_SERVER} ${VAULT_TOKEN}
+#### oc exec ${INSTANCE_NAME}-0 -- vault kv put secret/aap/machine username="${SSH_KEY_USERNAME}" ssh_key_data="${SSH_PRIVATE_KEY}"
+####
