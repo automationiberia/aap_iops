@@ -1,0 +1,2 @@
+include vault/create_vault_secrets.yaml
+recursive-include vault/roles/install_hashicorp *.yml *.yaml *.md
