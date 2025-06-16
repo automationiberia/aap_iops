@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: GPL3.0+
+# SPDX-License-Identifier: GPL3.0+
 ---
 - name: "Create the project {{ instance_name }}"
   kubernetes.core.k8s:
@@ -12,14 +12,16 @@
     state: present
     src: argocd-application-vault.yaml
 
-- name: "Fix the permissions for the service accounts"
-  ansible.builtin.shell: "oc adm policy add-scc-to-user anyuid -z {{ instance_name }}"
+- name: "Fix the permissions for the service accounts" # noqa no-changed-when
+  ansible.builtin.command: "oc adm policy add-scc-to-user anyuid -z {{ instance_name }}"
   loop:
     - "{{ instance_name }}"
     - "{{ instance_name }}-agent-injector"
   loop_control:
     loop_var: _current_sa
     label: "{{ _current_sa }}"
+  register: _policies_applied
+  changed_when: _policies_applied.rc != 0
 
 - name: "Get the assigned caBundle"
   kubernetes.core.k8s_info:
@@ -36,7 +38,7 @@
     namespace: "openshift-gitops"
   register: _current_application
 
-- name: Apply the patch operation to the existing Application
+- name: "Apply the patch operation to the existing Application"
   kubernetes.core.k8s_json_patch:
     api_version: argoproj.io/v1alpha1
     kind: Application
@@ -55,8 +57,8 @@
     path: id_ssh_rsa
   register: _generated_ssh_key_file
 
-- name: "Create the secrets into the vault through the pod {{ instance_name }}-0"
-  ansible.builtin.shell: "{{ _current_command }}"
+- name: "Create the secrets into the vault through the pod {{ instance_name }}-0" # noqa no-changed-when name[template]
+  ansible.builtin.command: "{{ _current_command }}"
   vars:
     _ssh_private_key: "{{ lookup('file', _generated_ssh_key_file.filename) }}"
   loop:
@@ -65,5 +67,6 @@
     loop_var: _current_command
     label: "Command {{ loop_index }}"
     index_var: loop_index
-
+  register: _secrets_created
+  changed_when: _secrets_created.rc != 0
 ...
