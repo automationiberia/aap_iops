@@ -1,2 +1,6 @@
 include vault/create_vault_secrets.yaml
 recursive-include vault/roles/install_hashicorp *.yml *.yaml *.md
+recursive-exclude .git *
+recursive-exclude .ansible *
+recursive-exclude vault .gitignore *.sh id_ssh_rsa* links.txt
+exclude *.asc .gitignore *.sh
