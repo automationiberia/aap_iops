@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MIT-0
+---
+# - name: "Create the NS for the Openshift Virtualization operator"
+#   kubernetes.core.k8s:
+#     name: "{{ ocpvirt_instance_name }}"
+#     api_version: v1
+#     kind: Namespace
+#     state: present
+#
+- name: "Install the Openshift Virtualization operator"
+  kubernetes.core.k8s:
+    state: present
+    src: ocpvirt-subscription.yaml
+
+- name: "Wait for the hyperconvergeds.hco.kubevirt.io CRD to be available"
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "hyperconvergeds.hco.kubevirt.io"
+  register: _hyperconverged_available
+  until: _hyperconverged_available.api_found
+  retries: 3
+
+- name: "Create the HyperConverged instance"
+  kubernetes.core.k8s:
+    state: present
+    src: ocpvirt-hyperconverged.yaml
+
+- name: "Wait for the hyperconvergeds.hco.kubevirt.io CRD to be available"
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "hyperconvergeds.hco.kubevirt.io"
+  register: _hyperconverged_available
+  until: _hyperconverged_available.api_found
+  retries: 3
+
+- name: "Create the VMs"
+  kubernetes.core.k8s:
+    state: present
+    template: ocpvirt-vms.yaml.j2
+  loop:
+    - ocpvirt-vms.yaml
+  loop_control:
+    loop_var: vm_name
+
+
+...

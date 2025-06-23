@@ -1,0 +1,10 @@
+---
+#
+# ansible-playbook playbooks/create_ocp_virt.yaml
+#
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - install_ocp_virt
+...
