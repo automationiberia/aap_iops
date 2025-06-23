@@ -40,7 +40,9 @@
     state: present
     template: ocpvirt-vms.yaml.j2
   loop:
-    - ocpvirt-vms.yaml
+    - user-workload
+    - bastion
+    - rhel-ai
   loop_control:
     loop_var: vm_name
 
